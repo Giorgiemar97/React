@@ -1,0 +1,124 @@
+import { useState, useEffect } from 'react';
+
+export default function MemoryGame() {
+  // Card emojis - we duplicate them to create pairs
+  const emojis = ['❤️', '🐰', '🐱', '🎮', '📚', '🖌️'];
+  
+  // Initialize cards: create pairs and shuffle
+  const initializeCards = () => {
+    const pairs = [...emojis, ...emojis]; // Duplicate for pairs
+    return pairs
+      .map((emoji, index) => ({ id: index, emoji, isFlipped: false, isMatched: false }))
+      .sort(() => Math.random() - 0.5); // Shuffle
+  };
+
+  const [cards, setCards] = useState(initializeCards());
+  const [flippedCards, setFlippedCards] = useState([]);
+  const [moves, setMoves] = useState(0);
+  const [isChecking, setIsChecking] = useState(false);
+
+  // Check for matches when two cards are flipped
+  useEffect(() => {
+    if (flippedCards.length === 2) {
+      setIsChecking(true);
+      const [first, second] = flippedCards;
+      
+      // Check if emojis match
+      if (cards[first].emoji === cards[second].emoji) {
+        // Match found! Mark both as matched
+        setCards(prev => prev.map((card, idx) => 
+          idx === first || idx === second 
+            ? { ...card, isMatched: true }
+            : card
+        ));
+        setFlippedCards([]);
+        setIsChecking(false);
+      } else {
+        // No match - flip back after delay
+        setTimeout(() => {
+          setCards(prev => prev.map((card, idx) => 
+            idx === first || idx === second 
+              ? { ...card, isFlipped: false }
+              : card
+          ));
+          setFlippedCards([]);
+          setIsChecking(false);
+        }, 1000);
+      }
+      setMoves(m => m + 1);
+    }
+  }, [flippedCards, cards]);
+
+  // Handle card click
+  const handleCardClick = (index) => {
+    // Prevent clicking if checking, already flipped, or matched
+    if (isChecking || cards[index].isFlipped || cards[index].isMatched || flippedCards.length >= 2) {
+      return;
+    }
+
+    // Flip the card
+    setCards(prev => prev.map((card, idx) => 
+      idx === index ? { ...card, isFlipped: true } : card
+    ));
+    setFlippedCards(prev => [...prev, index]);
+  };
+
+  // Reset game
+  const resetGame = () => {
+    setCards(initializeCards());
+    setFlippedCards([]);
+    setMoves(0);
+    setIsChecking(false);
+  };
+
+  // Check if game is won
+  const isWon = cards.every(card => card.isMatched);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full">
+        <div className="text-center mb-6">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">Memory Game</h1>
+          <p className="text-gray-600">Find all matching pairs!</p>
+          <div className="mt-4 text-lg font-semibold text-purple-600">
+            Moves: {moves}
+          </div>
+        </div>
+
+        {isWon && (
+          <div className="bg-green-100 border-2 border-green-500 rounded-lg p-4 mb-6 text-center">
+            <h2 className="text-2xl font-bold text-green-700">🎉 You Won! 🎉</h2>
+            <p className="text-green-600">Completed in {moves} moves</p>
+          </div>
+        )}
+
+        {/* Card Grid */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {cards.map((card, index) => (
+            <button
+              key={card.id}
+              onClick={() => handleCardClick(index)}
+              disabled={isChecking || card.isMatched}
+              className={`aspect-square rounded-lg text-4xl font-bold transition-all duration-300 transform hover:scale-105 ${
+                card.isFlipped || card.isMatched
+                  ? 'bg-white border-4 border-purple-400'
+                  : 'bg-gradient-to-br from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500'
+              } ${
+                card.isMatched ? 'opacity-60' : ''
+              }`}
+            >
+              {card.isFlipped || card.isMatched ? card.emoji : '?'}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={resetGame}
+          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 px-6 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 transform hover:scale-105"
+        >
+          New Game
+        </button>
+      </div>
+    </div>
+  );
+}
